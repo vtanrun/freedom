@@ -108,6 +108,21 @@ func (repo *Repository) NewH2CRequest(url string, transferCtx ...bool) Request {
 	return req
 }
 
+// GetEntityCache .
+func (repo *Repository) GetEntityCache(entity interface{}) error {
+	err := globalApp.entityCache.GetEntityCache(entity, repo)
+	if err != nil {
+		return err
+	}
+	injectBaseEntity(repo.GetRuntime(), entity)
+	return nil
+}
+
+// GetEntityCache .
+func (repo *Repository) DelEntityCache(entity interface{}) error {
+	return globalApp.entityCache.DeleteEntityCache(entity)
+}
+
 // // SingleFlight .
 // func (repo *Repository) SingleFlight(key string, value, takeObject interface{}, fn func() (interface{}, error)) error {
 // 	takeValue := reflect.ValueOf(takeObject)

@@ -34,6 +34,7 @@ func NewApplication() *Application {
 		globalApp.rpool = newRepoPool()
 		globalApp.comPool = newInfraPool()
 		globalApp.msgsBus = newMessageBus()
+		globalApp.entityCache = newEntityCache(nil, 120*time.Second)
 		globalApp.IrisApp.Logger().SetTimeFormat("2006-01-02 15:04:05.000")
 	})
 	return globalApp
@@ -53,13 +54,15 @@ type Application struct {
 	}
 
 	Cache struct {
-		client  redis.Cmdable
-		Install func() (client redis.Cmdable)
+		client        redis.Cmdable
+		Install       func() (client redis.Cmdable)
+		EntityInstall func() (client redis.Cmdable)
 	}
 	Middleware    []context.Handler
 	Prometheus    *Prometheus
 	ControllerDep []interface{}
 	eventInfra    DomainEventInfra
+	entityCache   *entityCache
 }
 
 // InstallParty .
@@ -242,6 +245,21 @@ func (app *Application) InstallRedis(f func() (client redis.Cmdable)) {
 	app.Cache.Install = f
 }
 
+// InstallEntityCache .
+func (app *Application) InstallEntityCache(expiration time.Duration, f func() (client redis.Cmdable)) {
+	app.entityCache.expiration = expiration
+	app.Cache.EntityInstall = f
+}
+
+// BindCacheWriting .
+func (app *Application) BindCacheWriting(fun interface{}) {
+	if app.entityCache.client == nil {
+		panic("Entity redis cache is not installed")
+	}
+	entityType := parseEntityCacheFunc(fun)
+	app.entityCache.AddEntityCache(entityType, fun)
+}
+
 func (app *Application) installDB() {
 	if app.Database.Install != nil {
 		app.Database.db = app.Database.Install()
@@ -249,6 +267,10 @@ func (app *Application) installDB() {
 
 	if app.Cache.Install != nil {
 		app.Cache.client = app.Cache.Install()
+	}
+
+	if app.Cache.EntityInstall != nil {
+		app.entityCache.client = app.Cache.Install()
 	}
 }
 

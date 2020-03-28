@@ -515,3 +515,32 @@ func parsePoolFunc(f interface{}) (outType reflect.Type, e error) {
 	}
 	return
 }
+
+func parseEntityCacheFunc(f interface{}) (outType reflect.Type) {
+	ftype := reflect.TypeOf(f)
+	if ftype.Kind() != reflect.Func {
+		panic("It's not a func")
+	}
+	if ftype.NumOut() != 1 {
+		panic("Return must be an error")
+	}
+
+	if !reflect.TypeOf(errors.New("fuck")).Implements(ftype.Out(0)) {
+		panic("The method must return an error type")
+	}
+
+	if ftype.NumIn() != 2 {
+		panic("Incorrect method parameter")
+	}
+
+	inType1 := ftype.In(0)
+	if inType1.Kind() != reflect.Ptr {
+		panic("Incorrect method parameter")
+	}
+
+	if !reflect.TypeOf(new(Repository)).Implements(ftype.In(1)) {
+		panic("Incorrect method parameter")
+	}
+	outType = inType1
+	return
+}

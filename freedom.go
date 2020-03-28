@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/kataras/iris/core/host"
 	"github.com/kataras/iris/hero"
@@ -132,6 +133,7 @@ func Configure(obj interface{}, fileName string, def bool) {
 type Application interface {
 	InstallGorm(f func() (db *gorm.DB))
 	InstallRedis(f func() (client redis.Cmdable))
+	InstallEntityCache(expiration time.Duration, f func() (client redis.Cmdable))
 	InstallMiddleware(handler iris.Handler)
 	InstallParty(relativePath string)
 	CreateH2CRunner(addr string, configurators ...host.Configurator) iris.Runner

@@ -3,9 +3,11 @@ package general
 import (
 	"fmt"
 	"reflect"
-	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
@@ -89,11 +91,16 @@ func TestStore(t *testing.T) {
 }
 
 type TestUser struct {
+	Entity
 	gorm.Model
 	UserName string `gorm:"size:32"`
 	Password string `gorm:"size:32"`
 	Age      int
 	Status   int
+}
+
+func (tu *TestUser) Identity() string {
+	return fmt.Sprint(tu.ID)
 }
 
 func newReorder(sort, field string, args ...string) *Reorder {
@@ -131,6 +138,35 @@ func TestParsePoolFunc(t *testing.T) {
 	t.Log(values[0])
 }
 
-func TestParsePoolFunc2(t *testing.T) {
-	t.Log(strings.Split("asdasdasdsad", "?"))
+func TestEntityCache(t *testing.T) {
+	NewApplication()
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     "127.0.0.1:6379",
+		Password: "",
+		DB:       0})
+	ec := newEntityCache(redisClient, 30*time.Second)
+	f := func(entity *TestUser, repo GORMRepository) error {
+		fmt.Println("fuck")
+		entity.Age = 23
+		return nil
+	}
+	entityType := parseEntityCacheFunc(f)
+	ec.AddEntityCache(entityType, f)
+
+	var wait sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wait.Add(1)
+		go func() {
+			var user TestUser
+			user.ID = 20
+			e := ec.GetEntityCache(&user, new(Repository))
+			t.Log(e, user)
+			wait.Done()
+		}()
+	}
+
+	wait.Wait()
+	clear := &TestUser{}
+	clear.ID = 20
+	//ec.DeleteEntityCache(clear)
 }

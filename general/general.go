@@ -16,6 +16,7 @@ type Initiator interface {
 	BindService(f interface{})
 	InjectController(f interface{})
 	BindRepository(f interface{})
+	BindCacheWriting(f interface{})
 	GetService(ctx iris.Context, service interface{})
 	AsyncCachePreheat(f func(repo *Repository))
 	CachePreheat(f func(repo *Repository))
